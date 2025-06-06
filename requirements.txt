@@ -1,0 +1,10 @@
+flask
+gunicorn
+tensorflow
+pandas
+numpy
+scikit-learn
+joblib
+openpyxl
+pyarrow
+torch

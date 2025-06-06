@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piyu-V Decision Support Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif']
+                    },
+                    colors: {
+                        primary: {
+                            500: '#597081', // Loading
+                            600: '#011936', // Button
+                            700: '#011936' //Header
+                        },
+                        secondary: {
+                            500: '#B0D0D3', // Intro
+                            600: '#011936'
+                        },
+                        tertiary: {
+                            500: '#6B7280'
+                        }
+                    },
+                    backdropBlur: {
+                        xs: '2px'
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                      row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                      headerRowIndex = 0;
+                    }
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error('Error processing XLSX file:', e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+        function on_upload() {
+            try {
+                const modal = document.getElementById('overlay_upload');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.style.display = 'flex';
+                } else {
+                    console.error('Modal element #overlay_upload not found');
+                }
+            } catch (e) {
+                console.error('Error opening upload modal:', e);
+            }
+        }
+    </script>
+    <style>
+        #overlay_upload {
+            transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
+        }
+        #overlay_upload.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        #overlay_upload .modal-content {
+            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+            transform-origin: center;
+        }
+        #overlay_upload.hidden .modal-content {
+            transform: translateY(-20px) scale(0.95);
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900 antialiased">
+    <header class="bg-primary-700/95 backdrop-blur-xs text-white py-4 px-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="{{ url_for('home') }}" class="text-2xl font-extrabold tracking-tight hover:text-secondary-500 transition-all duration-300">Piyu-V</a>
+            <a href="#about_us" class="text-base font-semibold hover:text-secondary-500 transition-all duration-300">About Us</a>
+        </div>
+    </header>
+
+    <div id="progressBarContainer" class="w-full h-1 bg-gray-300">
+        <div id="progressBar" class="h-full bg-primary-500 transition-all duration-500 ease-out"></div>
+    </div>
+
+    <section class="container mx-auto px-4 py-24 text-center bg-cover bg-center bg-no-repeat relative"
+             style="background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url('https://images.unsplash.com/photo-1598511726611-2f3b44b23b35?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');">
+        <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
+        <div class="relative z-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight tracking-tighter">
+                Decision Support for<br>Public Transit Excellence
+            </h1>
+            <p class="text-base md:text-lg text-gray-200 max-w-2xl mx-auto leading-relaxed">
+                Optimize Public Transit with <span class="font-bold text-secondary-500">Predictive Analytics</span>,
+                <span class="font-bold text-secondary-500">Route Optimization</span>, and
+                <span class="font-bold text-secondary-500">Resource Efficiency</span>
+            </p>
+        </div>
+    </section>
+
+    <section class="container mx-auto px-4 py-12">
+        <div id="overlay_upload" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div class="modal-content bg-white p-6 rounded-xl shadow-2xl w-full max-w-md mx-4 sm:mx-auto relative transform transition-all duration-400" onclick="event.stopPropagation()">
+                <button onclick="document.getElementById('overlay_upload').classList.add('hidden'); document.getElementById('overlay_upload').style.display = 'none';" 
+                        class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition bg-gray-100 rounded-full p-1.5 hover:bg-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+                <form class="space-y-5">
+                    <div>
+                        <label for="puv_capacity" class="block text-sm font-semibold text-gray-800">
+                            Total Capacity per PUV Unit
+                        </label>
+                        <input type="number" id="puv_capacity" name="capacity" min="0" step="1" required
+                               class="mt-1.5 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                               placeholder="Enter number of passengers">
+                    </div>
+                    <div>
+                        <label for="puv_units" class="block text-sm font-semibold text-gray-800">
+                            Total PUV Units Available per Day
+                        </label>
+                        <input type="number" id="puv_units" name="units" min="0" step="1" required
+                               class="mt-1.5 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                               placeholder="Enter number of PUV units">
+                    </div>
+                    <div>
+                        <input name="file" id="entry_value" ref="fileInput" type="file" multiple
+                               onchange="fileValidation(); document.getElementById('overlay_upload').classList.add('hidden'); document.getElementById('overlay_upload').style.display = 'none';"
+                               class="hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-600 text-sm">Click button to upload dataset(s)</span>
+                            <label for="entry_value" class="cursor-pointer bg-primary-600 text-white px-5 py-2 rounded-lg hover:bg-primary-700 transition-all duration-200 font-semibold hover:scale-105">
+                                Browse Files
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="text-center">
+            <button onclick="on_upload()" class="bg-primary-600 text-white px-6 py-3 rounded-xl hover:bg-primary-700 transition-all duration-300 text-base font-semibold shadow-lg hover:shadow-xl hover:scale-105">
+                Upload Data
+            </button>
+        </div>
+    </section>
+
+    <section class="container mx-auto px-4 py-16 bg-white rounded-xl shadow-lg">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center tracking-tight">Frequently Asked Questions</h2>
+        <div class="space-y-6 max-w-2xl mx-auto">
+            <div>
+                <h3 class="text-lg font-semibold text-primary-600">What is Piyu-V?</h3>
+                <p class="text-gray-600 mt-2 leading-relaxed text-sm">
+                    Piyu-V is a research-driven decision support tool leveraging advanced machine learning models like ST-GCN and LSTM to optimize public transportation. It predicts demand, optimizes routes, and enhances resource allocation by analyzing historical data, aligning urban planning with sustainability and efficiency for stakeholders like policymakers, transit operators, and commuters.
+                </p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-primary-600">What file types does Piyu-V accept?</h3>
+                <p class="text-gray-600 mt-2 leading-relaxed text-sm">
+                    Piyu-V accepts only <span class="font-semibold">.csv</span> files for <span class="italic">trip data</span>.
+                </p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-primary-600">What should be included in the trip dataset?</h3>
+                <p class="text-gray-600 mt-2 leading-relaxed text-sm">
+                    For optimal performance, the trip dataset should include: date, day_of_week, passenger_count, PULocationID, DOLocationID, trip_distance, and trip_duration. Refer to the 
+                    <a href="{{ url_for('static', filename='files/piyu-v_data_guide.pdf') }}" class="text-primary-600 hover:text-primary-700 hover:underline transition">Piyu-V Data Guide</a> for details.
+                </p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-primary-600">Does Piyu-V support multiple file uploads?</h3>
+                <p class="text-gray-600 mt-2 leading-relaxed text-sm">
+                    Yes, multiple files can be uploaded, provided they include the required attribute names, or the system will reject them.
+                </p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-primary-600">Does Piyu-V perform data pre-processing?</h3>
+                <p class="text-gray-600 mt-2 leading-relaxed text-sm">
+                    Piyu-V does not currently offer data pre-processing. Uploaded data is used directly for model execution, requiring correct formatting for effective results.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section id="about_us" class="container mx-auto px-4 py-16 text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-8 tracking-tight">Meet #define</h2>
+        <p class="text-base text-gray-600 mb-8 max-w-xl mx-auto">
+            We are <span class="font-bold">#define</span>: 3rd-year BS Computer Science students specializing in Data Science at FEU Tech, passionate about innovative transit solutions.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <div class="w-full h-40 flex items-center justify-center bg-gray-200">
+                    <svg class="w-20 h-20 text-primary-600" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Jan Vincenzo C. Reyes</h3>
+                    <p class="text-gray-600 mt-1 text-sm">Project Manager</p>
+                    <p class="text-gray-500 mt-1 text-xs">202210119@fit.edu.ph</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <div class="w-full h-40 flex items-center justify-center bg-gray-200">
+                    <svg class="w-20 h-20 text-primary-600" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Janella Myzel B. Sy</h3>
+                    <p class="text-gray-600 mt-1 text-sm">Developer</p>
+                    <p class="text-gray-500 mt-1 text-xs">202211258@fit.edu.ph</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <div class="w-full h-40 flex items-center justify-center bg-gray-200">
+                    <svg class="w-20 h-20 text-primary-600" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Maranatha Grace G. De Jesus</h3>
+                    <p class="text-gray-600 mt-1 text-sm">UI/UX Designer</p>
+                    <p class="text-gray-500 mt-1 text-xs">202210893@fit.edu.ph</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                <div class="w-full h-40 flex items-center justify-center bg-gray-200">
+                    <svg class="w-20 h-20 text-primary-600" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Joseph Allen D. Atentar</h3>
+                    <p class="text-gray-600 mt-1 text-sm">Quality Assurance</p>
+                    <p class="text-gray-500 mt-1 text-xs">202210883@fit.edu.ph</p>
+                </div>
+            </div>
+        </div>
+        <p class="mt-8 text-gray-600 text-xs">©2025 Atentar, De Jesus, Reyes, Sy<br>All Rights Reserved</p>
+    </section>
+</body>
+</html>
