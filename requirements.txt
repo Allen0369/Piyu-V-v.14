@@ -8,3 +8,9 @@ joblib
 openpyxl
 pyarrow
 torch
+torch-geometric
+torch-scatter
+torch-sparse
+torch-cluster
+torch-spline-conv
+pyg-lib
